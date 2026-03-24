@@ -57,6 +57,14 @@ export default function RootLayout() {
           headerTintColor: '#fff',
         }} 
       />
+
+      {/* Driver Profile Screen */}
+      <Stack.Screen 
+        name="driver-profile" 
+        options={{ 
+          headerShown: false, // Disabling the default header because we built a custom one inside the screen
+        }} 
+      />
       
       {/* Registration Selection Screen */}
       <Stack.Screen 

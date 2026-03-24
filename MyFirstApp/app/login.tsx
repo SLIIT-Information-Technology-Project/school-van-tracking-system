@@ -33,8 +33,14 @@ export default function LoginScreen() {
         await AsyncStorage.setItem('driverToken', response.data.token);
         await AsyncStorage.setItem('driverData', JSON.stringify(response.data.driver));
         
-        // 4. Navigate directly to the simple Map screen and pass the role parameter
-        router.replace({ pathname: '/map', params: { role: 'Driver' } });
+        // 4. Navigate directly to the simple Map screen and pass the profile payload securely
+        router.replace({ 
+            pathname: '/map', 
+            params: { 
+                role: 'Driver',
+                driverData: JSON.stringify(response.data.driver) 
+            } 
+        });
       }
     } catch (error: any) {
       // Handle login failures (e.g., wrong password, wrong email)
@@ -46,7 +52,28 @@ export default function LoginScreen() {
          Alert.alert('Mock Success (Server Offline)', 'The Node.js backend timed out, but we are letting you in to test the Map!', [
            { text: 'OK', onPress: () => {
                setLoading(false);
-               router.replace({ pathname: '/map', params: { role: 'Driver' } });
+
+               // Auto-inject a fully robust dummy payload so the profile screen doesn't crash empty offline
+               const overrideFallbackProfile = {
+                  name: "Network-Offline Override",
+                  username: "debug_user",
+                  phone: "555-0000",
+                  email: "offline@local.dev",
+                  licenseNumber: "DEV-111",
+                  vehicleType: "Van",
+                  vehicleNumber: "TEST-00",
+                  seatCount: "1",
+                  route: "Offline Route",
+                  emergencyContact: "911"
+               };
+
+               router.replace({ 
+                   pathname: '/map', 
+                   params: { 
+                       role: 'Driver',
+                       driverData: JSON.stringify(overrideFallbackProfile)
+                   } 
+               });
              } 
            } 
          ]);
