@@ -32,7 +32,8 @@ export const registerDriver = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Insert into 'users' table with role = 'driver'
-    const { data, error } = await supabase
+    // Attempt user insertion
+    let insertResult = await supabase
       .from("users")
       .insert([{
         name:          name.trim(),
@@ -44,13 +45,29 @@ export const registerDriver = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("Supabase error (registerDriver):", error);
-      if (error.code === "23505") {
+    // Fallback if 'username' column is missing in DB
+    if (insertResult.error && insertResult.error.code === '42703') {
+      console.warn("[Backend] username column missing, retrying registration without it");
+      insertResult = await supabase
+        .from("users")
+        .insert([{
+          name:          name.trim(),
+          email:         email.trim().toLowerCase(),
+          password_hash: passwordHash,
+          role:          "driver",
+        }])
+        .select()
+        .single();
+    }
+
+    if (insertResult.error) {
+      console.error("Supabase error (registerDriver):", insertResult.error);
+      if (insertResult.error.code === "23505") {
         return res.status(409).json({ message: "This email address is already registered." });
       }
-      throw error;
+      throw insertResult.error;
     }
+    const data = insertResult.data;
 
     // 4. Send Success Response
     return res.status(201).json({ 
@@ -79,17 +96,29 @@ export const loginDriver = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+    // 1. Find the user by email or username (Try with username column if it's there)
     console.log(`[Backend] Searching database for: ${identifier}`);
     
-    // 1. Find user by email OR username (case-insensitive supported by lowercasing everything in db in future)
-    const { data: user, error } = await supabase
+    let { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .or(`email.eq.${identifier},username.eq.${identifier}`) 
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
 
+    // Handle case where 'username' column doesn't exist yet (Legacy schema compatibility)
+    if (error && error.code === '42703') {
+      console.warn(`[Backend] 'username' column missing in Supabase. Falling back to email-only for: ${identifier}`);
+      const fallback = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", identifier)
+        .maybeSingle();
+      user = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) {
-      console.error("[Backend] Database reach failure:", error.message);
+      console.error("[Backend] Database search error:", error.message);
     }
 
     if (!user) {

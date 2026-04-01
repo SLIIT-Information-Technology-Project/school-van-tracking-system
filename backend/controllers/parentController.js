@@ -24,7 +24,8 @@ export const registerParent = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Insert into 'users' table with role = 'parent'
-    const { data, error } = await supabase
+    // Insertion
+    let insertResult = await supabase
       .from("users")
       .insert([{
         name:          name.trim(),
@@ -36,13 +37,29 @@ export const registerParent = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("Supabase error (registerParent):", error);
-      if (error.code === "23505") {
-        return res.status(409).json({ message: "This email address is already registered." });
-      }
-      throw error;
+    // Fallback if 'username' column is missing in DB
+    if (insertResult.error && insertResult.error.code === '42703') {
+       console.warn("[Backend] Parent registration: username column missing, retrying without it");
+       insertResult = await supabase
+         .from("users")
+         .insert([{
+           name:          name.trim(),
+           email:         email.trim().toLowerCase(),
+           password_hash: passwordHash,
+           role:          "parent",
+         }])
+         .select()
+         .single();
     }
+
+    if (insertResult.error) {
+      if (insertResult.error.code === "23505") { // Unique constraint violation
+        return res.status(400).json({ message: "Email already exists." });
+      }
+      throw insertResult.error;
+    }
+
+    const data = insertResult.data;
 
     return res.status(201).json({
       message: "Parent registered successfully!",
@@ -73,11 +90,25 @@ export const loginParent = async (req, res) => {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
     console.log(`[Backend] Parent login attempt: ${identifier}`);
-    const { data: user, error } = await supabase
+
+    // 1. Find user (any role)
+    let { data: user, error } = await supabase
       .from("users")
       .select("*")
       .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
+
+    // Fallback if username column missing
+    if (error && error.code === '42703') {
+       console.warn("[Backend] username column missing, failing over to email search");
+       const res = await supabase
+         .from("users")
+         .select("*")
+         .eq("email", identifier)
+         .maybeSingle();
+       user = res.data;
+       error = res.error;
+    }
 
     if (error) {
       console.error("[Backend] Parent database error:", error.message);
