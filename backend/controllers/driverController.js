@@ -79,17 +79,17 @@ export const loginDriver = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
-    console.log(`[Backend] Login attempt for identifier: ${identifier}`);
-
-    // 1. Find the user by email or username (any role) to give better feedback
+    console.log(`[Backend] Searching database for: ${identifier}`);
+    
+    // 1. Find user by email OR username (case-insensitive supported by lowercasing everything in db in future)
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
+      .or(`email.eq.${identifier},username.eq.${identifier}`) 
       .maybeSingle();
 
     if (error) {
-      console.error("[Backend] Database error during login:", error.message);
+      console.error("[Backend] Database reach failure:", error.message);
     }
 
     if (!user) {
