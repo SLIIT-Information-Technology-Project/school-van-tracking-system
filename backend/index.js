@@ -27,7 +27,7 @@ app.get("/api/health", (_req, res) => {
 
 // QR Code endpoint
 app.get("/qr", (_req, res) => {
-  const expoUrl = "exp://172.31.48.153:8081";
+  const expoUrl = "exp://172.28.19.253:8081";
   const html = `
     <!DOCTYPE html>
     <html lang="en">
