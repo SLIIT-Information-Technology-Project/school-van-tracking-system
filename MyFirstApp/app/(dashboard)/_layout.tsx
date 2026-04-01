@@ -81,7 +81,6 @@ export default function DashboardLayout() {
           ),
         }}
       />
-<<<<<<< HEAD
       <Tabs.Screen
         name="attendance"
         options={{
@@ -106,8 +105,10 @@ export default function DashboardLayout() {
           title: 'Payments',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="credit-card" size={size} color={color} />
-=======
-
+          ),
+        }}
+      />
+      
       {/* Notifications tab — visible only for Parents */}
       <Tabs.Screen
         name="notifications"
@@ -116,7 +117,6 @@ export default function DashboardLayout() {
           title: 'Notifications',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="bell-outline" size={size} color={color} />
->>>>>>> 568f2bbe1a433e4ecdcd01411f0cd4c2ac916790
           ),
         }}
       />

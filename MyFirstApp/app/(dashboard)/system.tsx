@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-// Fallback file - routes to platform-specific implementations
-export { default } from './system.web';
-=======
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, ActivityIndicator, FlatList, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -756,4 +752,3 @@ const styles = StyleSheet.create({
   presenceToggleText: { color: '#fff', fontSize: 18, fontWeight: '900' },
   presenceDesc: { textAlign: 'center', color: '#64748B', marginBottom: 25, paddingHorizontal: 20 }
 });
->>>>>>> 568f2bbe1a433e4ecdcd01411f0cd4c2ac916790

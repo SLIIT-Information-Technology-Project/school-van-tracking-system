@@ -1,8 +1,12 @@
-// Re-export the web version for all platforms
-export { default } from './map.web';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../services/supabase';
 
-<<<<<<< HEAD
-=======
 export default function MapScreen() {
   const router = useRouter();
   const { role: paramRole, driverId: paramDriverId } = useLocalSearchParams();
@@ -344,4 +348,3 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: 60, left: 20, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 100 },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '900' }
 });
->>>>>>> 568f2bbe1a433e4ecdcd01411f0cd4c2ac916790

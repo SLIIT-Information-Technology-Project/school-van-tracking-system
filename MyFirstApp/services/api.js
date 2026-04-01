@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─────────────────────────────────────────────────────────
 // API Base URL (Update to your current machine IP)
 // ─────────────────────────────────────────────────────────
-const LOCAL_IP = '172.28.19.253'; 
+const LOCAL_IP = '192.168.43.98'; 
 const API_URL = `http://${LOCAL_IP}:5000/api`;
 
 // Create the Axios HTTP client with the base URL
