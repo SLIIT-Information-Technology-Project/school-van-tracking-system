@@ -7,7 +7,7 @@ import { supabase } from "../utils/supabase.js";
 export const registerDriver = async (req, res) => {
   try {
     console.log("[Backend] registerDriver body:", req.body);
-    const { name, email, password } = req.body;
+    const { name, email, username, password } = req.body;
 
     // Validate required fields
     const errors = [];
@@ -36,6 +36,7 @@ export const registerDriver = async (req, res) => {
       .from("users")
       .insert([{
         name:          name.trim(),
+        username:      username ? username.trim().toLowerCase() : null,
         email:         email.trim().toLowerCase(),
         password_hash: passwordHash,
         role:          "driver",
@@ -79,13 +80,14 @@ export const loginDriver = async (req, res) => {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
 
-    // Find user by email AND role = 'driver'
+    // Find user by email OR username AND role = 'driver'
+    // This allows dual-field login.
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .eq("email", identifier)
+      .or(`email.eq.${identifier},username.eq.${identifier}`)
       .eq("role", "driver")
-      .single();
+      .maybeSingle(); // maybeSingle avoids error if not found
 
     if (error || !user) {
       return res.status(401).json({ message: "Invalid email or password." });

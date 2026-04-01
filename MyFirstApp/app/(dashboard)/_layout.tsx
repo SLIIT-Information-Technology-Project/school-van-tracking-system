@@ -69,6 +69,33 @@ export default function DashboardLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          title: 'Attendance',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="chat" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="payments"
+        options={{
+          title: 'Payments',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="credit-card" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

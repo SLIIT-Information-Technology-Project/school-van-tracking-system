@@ -9,7 +9,7 @@ import { supabase } from "../utils/supabase.js";
 export const registerParent = async (req, res) => {
   try {
     console.log("[Backend] registerParent body:", req.body);
-    const { name, email, password } = req.body;
+    const { name, email, username, password } = req.body;
 
     const errors = [];
     if (!name || name.trim().length < 2)         errors.push("Full name is required (at least 2 characters).");
@@ -28,6 +28,7 @@ export const registerParent = async (req, res) => {
       .from("users")
       .insert([{
         name:          name.trim(),
+        username:      username ? username.trim().toLowerCase() : null,
         email:         email.trim().toLowerCase(),
         password_hash: passwordHash,
         role:          "parent",
@@ -72,13 +73,14 @@ export const loginParent = async (req, res) => {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
 
-    // Find user by email AND role = 'parent'
+    // Find user by email OR username AND role = 'parent'
+    // Dual field login support
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .eq("email", identifier)
+      .or(`email.eq.${identifier},username.eq.${identifier}`)
       .eq("role", "parent")
-      .single();
+      .maybeSingle();
 
     if (error || !user) {
       return res.status(401).json({ message: "Invalid email or password." });
