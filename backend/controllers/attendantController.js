@@ -68,26 +68,40 @@ export const loginAttendant = async (req, res) => {
   try {
     const { email, input, password } = req.body;
     const identifier = (email || input || "").trim().toLowerCase();
-
+    
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+    console.log(`[Backend] Attendant login attempt: ${identifier}`);
 
-    // Find user by email OR username AND role = 'attendant'
-    // This allows dual-field login.
+    // 1. Find user (any role)
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .or(`email.eq.${identifier},username.eq.${identifier}`)
-      .eq("role", "attendant")
-      .maybeSingle(); // maybeSingle avoids error if not found
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
+      .maybeSingle();
 
-    if (error || !user) {
+    if (error) {
+      console.error("[Backend] Attendant database error:", error.message);
+    }
+
+    if (!user) {
+      console.info(`[Backend] User not found: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
+    // 2. Check role
+    if (user.role !== "attendant") {
+      console.info(`[Backend] Role mismatch: ${identifier} is ${user.role}, not attendant`);
+      return res.status(403).json({ 
+        message: `This account is registered as a ${user.role}. Please use the ${user.role} login portal.` 
+      });
+    }
+
+    // 3. Verify password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      console.info(`[Backend] Password mismatch: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

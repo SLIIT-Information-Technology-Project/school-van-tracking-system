@@ -68,26 +68,38 @@ export const loginParent = async (req, res) => {
   try {
     const { email, input, password } = req.body;
     const identifier = (email || input || "").trim().toLowerCase();
-
+    
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
-
-    // Find user by email OR username AND role = 'parent'
-    // Dual field login support
+    console.log(`[Backend] Parent login attempt: ${identifier}`);
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .or(`email.eq.${identifier},username.eq.${identifier}`)
-      .eq("role", "parent")
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
 
-    if (error || !user) {
+    if (error) {
+      console.error("[Backend] Parent database error:", error.message);
+    }
+
+    if (!user) {
+      console.info(`[Backend] User not found: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
+    // 2. Check role
+    if (user.role !== "parent") {
+      console.info(`[Backend] Role mismatch: ${identifier} is ${user.role}, not parent`);
+      return res.status(403).json({ 
+        message: `This account is registered as a ${user.role}. Please use the ${user.role} login portal.` 
+      });
+    }
+
+    // 3. Verify password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      console.info(`[Backend] Password mismatch: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

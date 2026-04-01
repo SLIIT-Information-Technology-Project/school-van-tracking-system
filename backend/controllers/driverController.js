@@ -79,23 +79,36 @@ export const loginDriver = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+    console.log(`[Backend] Login attempt for identifier: ${identifier}`);
 
-    // Find user by email OR username AND role = 'driver'
-    // This allows dual-field login.
+    // 1. Find the user by email or username (any role) to give better feedback
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .or(`email.eq.${identifier},username.eq.${identifier}`)
-      .eq("role", "driver")
-      .maybeSingle(); // maybeSingle avoids error if not found
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
+      .maybeSingle();
 
-    if (error || !user) {
+    if (error) {
+      console.error("[Backend] Database error during login:", error.message);
+    }
+
+    if (!user) {
+      console.log(`[Backend] User not found: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    // Compare passwords
+    // 2. Check the role
+    if (user.role !== "driver") {
+      console.log(`[Backend] Role mismatch: User ${identifier} is a ${user.role}, but tried to login as driver`);
+      return res.status(403).json({ 
+        message: `This account is registered as a ${user.role}. Please use the ${user.role} login portal.` 
+      });
+    }
+
+    // 3. Verify password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      console.log(`[Backend] Password mismatch for: ${identifier}`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
