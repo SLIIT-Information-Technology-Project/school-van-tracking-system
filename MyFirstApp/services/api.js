@@ -1,7 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Replace with your laptop's current local IP address (run 'ipconfig' in terminal)
+// ─────────────────────────────────────────────────────────
+// API Base URL (Update to your current machine IP)
+// ─────────────────────────────────────────────────────────
 const LOCAL_IP = '172.31.48.153'; 
 const API_URL = `http://${LOCAL_IP}:5000/api`;
 
@@ -33,5 +35,4 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
 export default api;
