@@ -316,12 +316,7 @@ export default function DashboardHomeScreen() {
                 <Text style={[styles.gridLabel, { color: isDark ? '#CBD5E1' : '#475569', fontSize: 16 }]}>Notices</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.gridItem, { width: '48%' }]} onPress={() => router.push('/create-route' as any)}>
-                <View style={[styles.iconBox, { backgroundColor: '#DCFCE7', width: 60, height: 60 }]}>
-                  <MaterialCommunityIcons name="map-marker-path" size={32} color="#10B981" />
-                </View>
-                <Text style={[styles.gridLabel, { color: isDark ? '#CBD5E1' : '#475569', fontSize: 16 }]}>Routes</Text>
-              </TouchableOpacity>
+
             </View>
           )}
 
