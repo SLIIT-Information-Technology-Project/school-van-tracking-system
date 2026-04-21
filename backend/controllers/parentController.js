@@ -91,20 +91,13 @@ export const loginParent = async (req, res) => {
     }
     console.log(`[Backend] Parent login attempt: ${identifier}`);
 
-<<<<<<< HEAD
     // 1. Find user (any role)
     let { data: user, error } = await supabase
-=======
-    // Find user by email AND role = 'parent'
-    console.log(`[Backend] Attempting login for identifier: ${identifier} (role: parent)`);
-    const { data: user, error } = await supabase
->>>>>>> origin/main
       .from("users")
       .select("*")
       .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
 
-<<<<<<< HEAD
     // Fallback if username column missing
     if (error && error.code === '42703') {
        console.warn("[Backend] username column missing, failing over to email search");
@@ -138,17 +131,6 @@ export const loginParent = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       console.info(`[Backend] Password mismatch: ${identifier}`);
-=======
-    if (error || !user) {
-      console.warn(`[Backend] Login failed: User not found or error occurred for ${identifier}. Error:`, error?.message || "User not found");
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    console.log(`[Backend] User found: ${user.email}. Comparing passwords...`);
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      console.warn(`[Backend] Login failed: Password mismatch for ${identifier}.`);
->>>>>>> origin/main
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

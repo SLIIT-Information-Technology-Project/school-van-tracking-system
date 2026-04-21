@@ -1,21 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-<<<<<<< HEAD
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
-=======
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, SafeAreaView, StatusBar, Dimensions
-} from 'react-native';
-import MapView, { Marker, Callout, Polyline } from 'react-native-maps';
->>>>>>> origin/main
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabase';
-
-const { width } = Dimensions.get('window');
 
 export default function MapScreen() {
   const router = useRouter();
