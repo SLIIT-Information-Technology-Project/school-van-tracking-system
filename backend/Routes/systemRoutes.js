@@ -1,18 +1,23 @@
 import express from "express";
 import { 
   createSystem, 
-  getSystem, 
+  getDriverSystems, 
+  getSystemById,
   joinSystem, 
   getSystemParents, 
   removeParent,
   getRoutes,
-  getParentSystem,
+  getParentSystems,
   updateSystemRoute,
   startTrackingNotify,
   stopTrackingNotify,
   joinSystemAttendant,
-  getAttendantSystem,
-  updateAttendantPresence
+  getAttendantSystems,
+  updateAttendantPresence,
+  updateParentPickup,
+  updateAttendantControl,
+  updateAttendantActivityAccess,
+  updateSystemRouteMap
 } from "../controllers/systemController.js";
 
 const router = express.Router();
@@ -22,7 +27,9 @@ router.get("/routes", getRoutes);
 
 // Driver routes
 router.post("/create", createSystem);
-router.get("/driver/:driverId", getSystem);
+router.get("/driver/:driverId", getDriverSystems);
+router.get("/:systemId", getSystemById);
+router.put('/:systemId/route-map', updateSystemRouteMap);
 router.put("/:systemId/route", updateSystemRoute);
 router.get("/:systemId/parents", getSystemParents);
 router.delete("/:systemId/parents/:parentId", removeParent);
@@ -31,11 +38,14 @@ router.post("/:systemId/tracking/stop", stopTrackingNotify);
 
 // Parent routes
 router.post("/join", joinSystem);
-router.get("/parent/:parentId", getParentSystem);
+router.get("/parent/:parentId", getParentSystems);
+router.put("/:systemId/parent/:parentId/pickup", updateParentPickup);
 
 // Attendant routes
 router.post("/join-attendant", joinSystemAttendant);
-router.get("/attendant/:attendantId", getAttendantSystem);
+router.get("/attendant/:attendantId", getAttendantSystems);
 router.put("/attendant/:attendantId/presence", updateAttendantPresence);
+router.put("/attendant/:attendantId/control", updateAttendantControl);
+router.put("/attendant/:attendantId/activities-access", updateAttendantActivityAccess);
 
 export default router;

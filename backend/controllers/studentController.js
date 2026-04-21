@@ -1,16 +1,17 @@
 import { supabase } from "../utils/supabase.js";
+import { notifyStaff, notifyParents } from './systemController.js';
 
 // Add a new student
 export const addStudent = async (req, res) => {
   try {
-    const { parentId, name, school, grade, pickupLocation, dropoffLocation, joinCode } = req.body;
+    const { parentId, name, school, grade, pickupLocation, dropoffLocation, joinCode, systemId } = req.body;
 
     if (!parentId || !name || !school) {
       return res.status(400).json({ message: "Parent ID, Name, and School are required." });
     }
 
-    let resolvedSystemId = null;
-    if (joinCode) {
+    let resolvedSystemId = systemId || null;
+    if (joinCode && !resolvedSystemId) {
       const { data: systemData, error: systemError } = await supabase
         .from('transportation_systems')
         .select('id')
@@ -68,9 +69,16 @@ export const getStudentsByParent = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, school, grade, pickupLocation, dropoffLocation, joinCode } = req.body;
+    const { name, school, grade, pickupLocation, dropoffLocation, joinCode, systemId, role, userId } = req.body;
 
-    let resolvedSystemId = undefined;
+    // 1. Get current student data to see if system_id is changing
+    const { data: currentStudent } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    let resolvedSystemId = systemId;
     if (joinCode) {
       const { data: systemData, error: systemError } = await supabase
         .from('transportation_systems')
@@ -104,8 +112,51 @@ export const updateStudent = async (req, res) => {
 
     if (error) throw error;
 
+    // 2. Notifications for Removal
+    if (currentStudent?.system_id && resolvedSystemId === null) {
+      const oldSystemId = currentStudent.system_id;
+      const studentName = currentStudent.name || "A student";
+
+      if (role === 'Attendant') {
+        const { data: parentData } = await supabase.from('users').select('name').eq('id', userId).single();
+        const attendantName = parentData?.name || "The attendant";
+        // Notify Driver
+        await notifyStaff(oldSystemId, `${attendantName} has removed ${studentName} from the system.`, 'student_removed', userId);
+        // Notify Parent
+        if (currentStudent.parent_id) {
+          await supabase.from('notifications').insert([{
+            user_id: currentStudent.parent_id,
+            system_id: oldSystemId,
+            message: `Your child ${studentName} has been removed from the transportation system by the attendant.`,
+            type: 'student_removed'
+          }]);
+        }
+      } else if (role === 'Driver') {
+        // Notify Parent
+        if (currentStudent.parent_id) {
+          await supabase.from('notifications').insert([{
+            user_id: currentStudent.parent_id,
+            system_id: oldSystemId,
+            message: `Your child ${studentName} has been removed from the transportation system by the driver.`,
+            type: 'student_removed'
+          }]);
+        }
+      } else if (role === 'Parent') {
+        // Notify Driver + Attendants
+        await notifyStaff(oldSystemId, `Parent has removed ${studentName} from the system.`, 'student_removed', userId);
+      }
+    } 
+    // 3. Notifications for Joining
+    else if (!currentStudent?.system_id && resolvedSystemId) {
+      if (role === 'Parent') {
+        const studentName = data.name || "A new student";
+        await notifyStaff(resolvedSystemId, `${studentName} has been added to your system by a parent.`, 'student_added', userId);
+      }
+    }
+
     res.status(200).json({ message: "Student profile updated", student: data });
   } catch (error) {
+    console.error("[updateStudent] Error:", error);
     res.status(500).json({ message: "Error updating student", error: error.message });
   }
 };
@@ -125,5 +176,41 @@ export const deleteStudent = async (req, res) => {
     res.status(200).json({ message: "Student deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting student", error: error.message });
+  }
+};
+
+export const getStudentsBySystem = async (req, res) => {
+  try {
+    const { systemId } = req.params;
+
+    if (!systemId) {
+      return res.status(400).json({ message: "System ID is required." });
+    }
+
+    // 1. Fetch students
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('system_id', systemId);
+
+    if (error) throw error;
+
+    // 2. Map parent names if possible (optional enhancement)
+    const enrichedStudents = await Promise.all((students || []).map(async (s) => {
+      if (s.parent_id) {
+        const { data: parent } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', s.parent_id)
+          .single();
+        return { ...s, parent_name: parent?.name || 'Unknown' };
+      }
+      return s;
+    }));
+
+    res.status(200).json({ students: enrichedStudents });
+  } catch (error) {
+    console.error("[getStudentsBySystem] Error:", error);
+    res.status(500).json({ message: "Error fetching system students", error: error.message });
   }
 };
