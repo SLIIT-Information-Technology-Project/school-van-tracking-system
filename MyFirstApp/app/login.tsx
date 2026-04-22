@@ -1,28 +1,48 @@
-import React, { useState } from 'react';
+// ============================================================
+// Driver Login Screen — Redesigned UI
+// Modern gradient background, animated card, styled inputs
+// ============================================================
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
-  Image, SafeAreaView, StatusBar, KeyboardAvoidingView,
-  Platform, ScrollView
+  SafeAreaView, StatusBar, KeyboardAvoidingView,
+  Platform, ScrollView, Animated, Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { loginDriver } from '../services/loginService';
 
-const BANNER_IMG = require('../assets/images/bus_banner.png');
+const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword]     = useState('');
   const [loading, setLoading]       = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const router = useRouter();
 
+  // ── Entrance animations ──────────────────────────────────
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(60)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  // ── Login logic (unchanged) ──────────────────────────────
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
       Alert.alert('Missing Details', 'Please enter your email/username and password.');
       return;
     }
-
     setLoading(true);
     try {
       const result: any = await loginDriver(identifier, password);
@@ -44,88 +64,118 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          
-          {/* Top Banner */}
-          <View style={styles.bannerContainer}>
-            <Image 
-              source={BANNER_IMG} 
-              style={styles.bannerImage}
-              resizeMode="cover"
-            />
-            <View style={styles.overlay}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <View style={styles.headerTextWrapper}>
-                <Text style={styles.title}>Driver Login</Text>
-                <Text style={styles.subtitle}>Safe routes for every student</Text>
-              </View>
+
+      {/* ── Full-screen gradient background ── */}
+      <LinearGradient
+        colors={['#1a1a2e', '#16213e', '#0f3460']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* ── Decorative blurred circles ── */}
+      <View style={[styles.blob, { top: -80, right: -60, backgroundColor: '#3B82F680' }]} />
+      <View style={[styles.blob, { bottom: 100, left: -80, backgroundColor: '#8B5CF660', width: 220, height: 220 }]} />
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} showsVerticalScrollIndicator={false}>
+
+          {/* ── Back button ── */}
+          <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: 25, paddingTop: Platform.OS === 'android' ? 50 : 20 }}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* ── Hero header ── */}
+          <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <View style={styles.iconRing}>
+              <LinearGradient colors={['#3B82F6', '#6366F1']} style={styles.iconRingGradient}>
+                <MaterialCommunityIcons name="steering" size={36} color="#fff" />
+              </LinearGradient>
             </View>
-          </View>
+            <Text style={styles.heroTitle}>Driver Login</Text>
+            <Text style={styles.heroSubtitle}>Safe routes for every student</Text>
+          </Animated.View>
 
-          {/* Login Card */}
-          <View style={styles.loginCardWrapper}>
-            <View style={styles.loginCard}>
-              <Text style={styles.formTitle}>Enter Credentials</Text>
-              <Text style={styles.formDesc}>Sign in to access your daily schedule and live tracking dashboard.</Text>
-              
-              <View style={styles.inputGroup}>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email or Username"
-                    placeholderTextColor="#94A3B8"
-                    value={identifier}
-                    onChangeText={setIdentifier}
-                    autoCapitalize="none"
-                  />
-                </View>
+          {/* ── Login card ── */}
+          <Animated.View style={[styles.cardWrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateY: slideAnim }] }]}>
+            {/* Glassmorphism card */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Enter Credentials</Text>
+              <Text style={styles.cardDesc}>Sign in to access your daily schedule and live tracking dashboard.</Text>
 
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#94A3B8"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                  />
-                </View>
+              {/* Email / Username field */}
+              <View style={[styles.inputWrapper, focusedField === 'id' && styles.inputWrapperFocused]}>
+                <Ionicons name="mail-outline" size={20} color={focusedField === 'id' ? '#3B82F6' : '#94A3B8'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email or Username"
+                  placeholderTextColor="#64748B"
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  autoCapitalize="none"
+                  onFocus={() => setFocusedField('id')}
+                  onBlur={() => setFocusedField(null)}
+                />
               </View>
 
-              <TouchableOpacity
-                style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-              >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <View style={styles.btnContent}>
-                      <Text style={styles.loginBtnText}>SIGN IN</Text>
-                      <Ionicons name="arrow-forward" size={18} color="#fff" />
-                    </View>
-                }
-              </TouchableOpacity>
+              {/* Password field */}
+              <View style={[styles.inputWrapper, focusedField === 'pw' && styles.inputWrapperFocused]}>
+                <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'pw' ? '#3B82F6' : '#94A3B8'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="#64748B"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  onFocus={() => setFocusedField('pw')}
+                  onBlur={() => setFocusedField(null)}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
 
+              {/* Forgot password */}
               <TouchableOpacity style={styles.forgotBtn}>
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
-            </View>
 
-            <View style={styles.footerContainer}>
-              <Text style={styles.footerText}>Need technical help?</Text>
-              <TouchableOpacity>
-                <Text style={styles.supportText}>Contact Support</Text>
+              {/* Gradient login button */}
+              <TouchableOpacity
+                style={[styles.loginBtnWrapper, loading && { opacity: 0.7 }]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#3B82F6', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.loginBtn}>
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <>
+                        <MaterialCommunityIcons name="steering" size={20} color="#fff" />
+                        <Text style={styles.loginBtnText}>SIGN IN AS DRIVER</Text>
+                        <Ionicons name="arrow-forward" size={18} color="#fff" />
+                      </>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Footer */}
+              <View style={styles.footerRow}>
+                <Text style={styles.footerText}>Need help?</Text>
+                <TouchableOpacity>
+                  <Text style={styles.footerLink}>Contact Support</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </Animated.View>
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -134,36 +184,74 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { flexGrow: 1 },
-  
-  bannerContainer: { height: 320, position: 'relative' },
-  bannerImage: { width: '100%', height: '100%' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30, 41, 59, 0.4)', padding: 30, justifyContent: 'space-between' },
-  backBtn: { marginTop: 40, width: 45, height: 45, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  headerTextWrapper: { marginBottom: 40 },
-  title: { fontSize: 36, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 },
-  subtitle: { fontSize: 16, color: '#F1F5F9', fontWeight: '500', opacity: 0.9, marginTop: 4 },
+  safeArea: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingBottom: 40 },
 
-  loginCardWrapper: { marginTop: -50, paddingHorizontal: 25, flex: 1 },
-  loginCard: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 12 },
-  formTitle: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 5 },
-  formDesc: { fontSize: 13, color: '#64748B', lineHeight: 20, marginBottom: 25 },
+  // Decorative blobs
+  blob: { position: 'absolute', width: 200, height: 200, borderRadius: 100, opacity: 0.25 },
 
-  inputGroup: { gap: 15, marginBottom: 25 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', paddingHorizontal: 15 },
+  // Back button
+  backBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+
+  // Hero
+  heroSection: { alignItems: 'center', paddingVertical: 36 },
+  iconRing: {
+    width: 90, height: 90, borderRadius: 45,
+    borderWidth: 3, borderColor: 'rgba(59,130,246,0.4)',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
+  },
+  iconRingGradient: { width: 76, height: 76, borderRadius: 38, justifyContent: 'center', alignItems: 'center' },
+  heroTitle: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 0.5, marginBottom: 6 },
+  heroSubtitle: { fontSize: 15, color: '#94A3B8', fontWeight: '500' },
+
+  // Card
+  cardWrapper: { paddingHorizontal: 20 },
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 32, padding: 28,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  cardTitle: { fontSize: 22, fontWeight: '800', color: '#F1F5F9', marginBottom: 6 },
+  cardDesc: { fontSize: 13, color: '#64748B', lineHeight: 20, marginBottom: 24 },
+
+  // Inputs
+  inputWrapper: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 16, marginBottom: 14,
+  },
+  inputWrapperFocused: {
+    borderColor: '#3B82F6',
+    backgroundColor: 'rgba(59,130,246,0.08)',
+  },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, paddingVertical: 18, fontSize: 16, color: '#1E293B', fontWeight: '500' },
+  input: { flex: 1, paddingVertical: 18, fontSize: 15, color: '#F1F5F9', fontWeight: '500' },
 
-  loginBtn: { backgroundColor: '#3B82F6', borderRadius: 20, paddingVertical: 18, alignItems: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 15, elevation: 8 },
-  loginBtnDisabled: { opacity: 0.6 },
-  btnContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  loginBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
+  // Forgot
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 22 },
+  forgotText: { color: '#3B82F6', fontWeight: '600', fontSize: 13 },
 
-  forgotBtn: { marginTop: 20, alignSelf: 'center' },
-  forgotText: { color: '#64748B', fontWeight: 'bold', fontSize: 14 },
+  // Login button
+  loginBtnWrapper: { borderRadius: 20, overflow: 'hidden', marginBottom: 22 },
+  loginBtn: {
+    paddingVertical: 18, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
 
-  footerContainer: { marginTop: 30, paddingBottom: 30, alignItems: 'center', gap: 6 },
-  footerText: { color: '#94A3B8', fontSize: 14 },
-  supportText: { color: '#3B82F6', fontWeight: 'bold', fontSize: 14 },
+  // Divider
+  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
+  dividerText: { color: '#475569', fontSize: 12, marginHorizontal: 12, fontWeight: '600' },
+
+  // Footer
+  footerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  footerText: { color: '#64748B', fontSize: 14 },
+  footerLink: { color: '#3B82F6', fontWeight: '700', fontSize: 14 },
 });
