@@ -119,6 +119,7 @@ CREATE TABLE attendance (
     UNIQUE(student_id, date)
 );
 
+<<<<<<< HEAD
 -- 7. Payments table
 CREATE TABLE payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -138,6 +139,9 @@ CREATE TABLE payments (
 );
 
 -- 8. Notifications table
+=======
+-- 9. Notifications table
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,

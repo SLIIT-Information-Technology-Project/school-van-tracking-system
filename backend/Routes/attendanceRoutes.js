@@ -1,4 +1,5 @@
 import express from "express";
+<<<<<<< HEAD
 import {
   markPickup,
   markDropoff,
@@ -43,5 +44,13 @@ router.put("/:attendanceId/notes", updateAttendanceNotes);
 
 // Delete an attendance record
 router.delete("/:attendanceId", deleteAttendance);
+=======
+import { markAttendance, getStudentActivities } from "../controllers/attendanceController.js";
+
+const router = express.Router();
+
+router.post("/mark", markAttendance);
+router.get("/:studentId", getStudentActivities);
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
 
 export default router;

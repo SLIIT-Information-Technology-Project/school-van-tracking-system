@@ -96,15 +96,23 @@ export const loginDriver = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+<<<<<<< HEAD
     // 1. Find the user by email or username (Try with username column if it's there)
     console.log(`[Backend] Searching database for: ${identifier}`);
     
     let { data: user, error } = await supabase
+=======
+
+    // Find user by email AND role = 'driver'
+    console.log(`[Backend] Attempting login for identifier: ${identifier} (role: driver)`);
+    const { data: user, error } = await supabase
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
       .from("users")
       .select("*")
       .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
 
+<<<<<<< HEAD
     // Handle case where 'username' column doesn't exist yet (Legacy schema compatibility)
     if (error && error.code === '42703') {
       console.warn(`[Backend] 'username' column missing in Supabase. Falling back to email-only for: ${identifier}`);
@@ -138,6 +146,18 @@ export const loginDriver = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       console.log(`[Backend] Password mismatch for: ${identifier}`);
+=======
+    if (error || !user) {
+      console.warn(`[Backend] Login failed: User not found or error occurred for ${identifier}. Error:`, error?.message || "User not found");
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    console.log(`[Backend] User found: ${user.email}. Comparing passwords...`);
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      console.warn(`[Backend] Login failed: Password mismatch for ${identifier}.`);
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

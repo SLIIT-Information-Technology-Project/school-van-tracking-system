@@ -39,40 +39,44 @@ export default function DashboardLayout() {
   const accentColor = role === 'Parent' ? '#10B981' : role === 'Attendant' ? '#8B5CF6' : '#3B82F6';
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown:           true,
-        headerStyle:           { backgroundColor: accentColor },
-        headerTintColor:       '#fff',
-        tabBarActiveTintColor: accentColor,
-      }}
-    >
-      {/* Dashboard summary tab */}
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: true,
+          headerStyle: { backgroundColor: accentColor },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' },
+          headerRight: () => (
+            <TouchableOpacity 
+              onPress={() => setIsMenuVisible(true)} 
+              style={{ marginRight: 15, padding: 5 }}
+            >
+              <Ionicons name="menu" size={28} color="#fff" />
+            </TouchableOpacity>
           ),
         }}
-      />
+      >
+        <Stack.Screen 
+          name="home" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false 
+          }} 
+        />
+        <Stack.Screen name="system" options={{ title: 'System Details' }} />
+        <Stack.Screen name="map" options={{ title: 'Live Tracking' }} />
+        <Stack.Screen name="notifications" options={{ title: 'Notices' }} />
+      </Stack>
 
-      {/* Live Map tab — hidden for everyone, only accessible via System view */}
-      <Tabs.Screen
-        name="map"
-        options={{
-          href: null,
-          title: 'Live Map',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="map-marker-radius"
-              size={size}
-              color={color}
-            />
-          ),
-        }}
+      <MenuPanel 
+        isVisible={isMenuVisible} 
+        onClose={() => setIsMenuVisible(false)} 
+        role={role}
+        userName={userName}
+        theme={theme}
+        onThemeChange={toggleTheme}
       />
+<<<<<<< HEAD
       <Tabs.Screen
         name="system"
         options={{
@@ -121,6 +125,8 @@ export default function DashboardLayout() {
           ),
         }}
       />
+=======
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
     </>
   );
 }
