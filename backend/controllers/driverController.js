@@ -7,7 +7,7 @@ import { supabase } from "../utils/supabase.js";
 export const registerDriver = async (req, res) => {
   try {
     console.log("[Backend] registerDriver body:", req.body);
-    const { name, email, password } = req.body;
+    const { name, email, username, password } = req.body;
 
     // Validate required fields
     const errors = [];
@@ -32,10 +32,12 @@ export const registerDriver = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Insert into 'users' table with role = 'driver'
-    const { data, error } = await supabase
+    // Attempt user insertion
+    let insertResult = await supabase
       .from("users")
       .insert([{
         name:          name.trim(),
+        username:      username ? username.trim().toLowerCase() : null,
         email:         email.trim().toLowerCase(),
         password_hash: passwordHash,
         role:          "driver",
@@ -43,13 +45,29 @@ export const registerDriver = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("Supabase error (registerDriver):", error);
-      if (error.code === "23505") {
+    // Fallback if 'username' column is missing in DB
+    if (insertResult.error && insertResult.error.code === '42703') {
+      console.warn("[Backend] username column missing, retrying registration without it");
+      insertResult = await supabase
+        .from("users")
+        .insert([{
+          name:          name.trim(),
+          email:         email.trim().toLowerCase(),
+          password_hash: passwordHash,
+          role:          "driver",
+        }])
+        .select()
+        .single();
+    }
+
+    if (insertResult.error) {
+      console.error("Supabase error (registerDriver):", insertResult.error);
+      if (insertResult.error.code === "23505") {
         return res.status(409).json({ message: "This email address is already registered." });
       }
-      throw error;
+      throw insertResult.error;
     }
+    const data = insertResult.data;
 
     // 4. Send Success Response
     return res.status(201).json({ 
@@ -78,15 +96,62 @@ export const loginDriver = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+<<<<<<< HEAD
+    // 1. Find the user by email or username (Try with username column if it's there)
+    console.log(`[Backend] Searching database for: ${identifier}`);
+    
+    let { data: user, error } = await supabase
+=======
 
     // Find user by email ONLY first (to diagnose role mismatch better)
     console.log(`[Backend] Attempting login for identifier: ${identifier}`);
     const { data: user, error } = await supabase
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
       .from("users")
       .select("*")
+<<<<<<< HEAD
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
+      .maybeSingle();
+=======
       .eq("email", identifier)
       .single();
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
 
+<<<<<<< HEAD
+    // Handle case where 'username' column doesn't exist yet (Legacy schema compatibility)
+    if (error && error.code === '42703') {
+      console.warn(`[Backend] 'username' column missing in Supabase. Falling back to email-only for: ${identifier}`);
+      const fallback = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", identifier)
+        .maybeSingle();
+      user = fallback.data;
+      error = fallback.error;
+    }
+
+    if (error) {
+      console.error("[Backend] Database search error:", error.message);
+    }
+
+    if (!user) {
+      console.log(`[Backend] User not found: ${identifier}`);
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // 2. Check the role
+    if (user.role !== "driver") {
+      console.log(`[Backend] Role mismatch: User ${identifier} is a ${user.role}, but tried to login as driver`);
+      return res.status(403).json({ 
+        message: `This account is registered as a ${user.role}. Please use the ${user.role} login portal.` 
+      });
+    }
+
+    // 3. Verify password
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      console.log(`[Backend] Password mismatch for: ${identifier}`);
+=======
     if (error || !user) {
       console.warn(`[Backend] Login aborted: Email not found for ${identifier}.`);
       return res.status(401).json({ message: "Invalid email or password." });
@@ -103,7 +168,12 @@ export const loginDriver = async (req, res) => {
     // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+<<<<<<< HEAD
+      console.warn(`[Backend] Login failed: Password mismatch for ${identifier}.`);
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
+=======
       console.warn(`[Backend] Login aborted: Password mismatch for ${identifier}.`);
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

@@ -1,132 +1,174 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Image, ScrollView, Dimensions } from 'react-native';
+// ============================================================
+// Registration Selection Screen — Redesigned UI
+// Premium entrance, gradient background, modern choice cards
+// ============================================================
+import React, { useEffect, useRef } from 'react';
+import { 
+  View, Text, TouchableOpacity, StyleSheet, 
+  SafeAreaView, StatusBar, Image, ScrollView, 
+  Animated, Platform 
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
 const REG_BANNER = require('../assets/images/registration_bus.png');
 
 export default function RegistrationScreen() {
   const router = useRouter();
   
+  // ── Animations ──────────────────────────────────────────
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const handleDriverRegistration = () => router.push('/driver-registration');
   const handleParentRegistration = () => router.push('/parent-registration');
   const handleAttendantRegistration = () => router.push('/attendant-registration');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      
+      {/* ── Background Gradient ── */}
+      <LinearGradient
+        colors={['#1e1b4b', '#1e293b', '#0f172a']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
-        {/* Banner with Back Button */}
-        <View style={styles.bannerContainer}>
-          <Image source={REG_BANNER} style={styles.bannerImage} resizeMode="cover" />
-          <View style={styles.overlay}>
+        {/* ── Top Hero Area ── */}
+        <View style={styles.heroArea}>
+          <Image source={REG_BANNER} style={styles.heroImage} resizeMode="cover" />
+          <LinearGradient
+            colors={['rgba(30, 27, 75, 0.4)', 'rgba(15, 23, 42, 0.95)', '#0f172a']}
+            style={styles.heroOverlay}
+          />
+          
+          <Animated.View style={[styles.navHeader, { opacity: fadeAnim }]}>
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.headerTitleWrapper}>
-              <Text style={styles.mainTitle}>Join Our Community</Text>
-              <Text style={styles.mainSubtitle}>Choose your role to get started</Text>
-            </View>
-          </View>
+          </Animated.View>
+
+          <Animated.View style={[styles.heroText, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Text style={styles.mainTitle}>Join Our{'\n'}Community</Text>
+            <Text style={styles.mainSubtitle}>Choose your role to get started with the tracking system.</Text>
+          </Animated.View>
         </View>
 
-        {/* Selection Cards */}
-        <View style={styles.content}>
+        {/* ── Selection Cards ── */}
+        <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <Text style={styles.sectionHeading}>Registration Options</Text>
           
+          {/* Driver Card */}
           <TouchableOpacity 
-            style={[styles.regCard, { borderLeftColor: '#3B82F6' }]} 
-            activeOpacity={0.7}
+            style={styles.regCard} 
+            activeOpacity={0.8}
             onPress={handleDriverRegistration}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="car" size={28} color="#3B82F6" />
-            </View>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Register as Driver</Text>
-              <Text style={styles.cardDesc}>Sign up to manage your van, route, and kids safely.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+            <LinearGradient colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.05)']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.cardInner}>
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <MaterialCommunityIcons name="steering" size={28} color="#3B82F6" />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>Register as Driver</Text>
+                <Text style={styles.cardDesc}>Manage your van, route, and children's safety.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
+            </LinearGradient>
           </TouchableOpacity>
 
+          {/* Parent Card */}
           <TouchableOpacity 
-            style={[styles.regCard, { borderLeftColor: '#10B981' }]} 
-            activeOpacity={0.7}
+            style={styles.regCard} 
+            activeOpacity={0.8}
             onPress={handleParentRegistration}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#D1FAE5' }]}>
-              <Ionicons name="people" size={28} color="#10B981" />
-            </View>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Register as Parent</Text>
-              <Text style={styles.cardDesc}>Add your students to track their live journey daily.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+            <LinearGradient colors={['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.05)']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.cardInner}>
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Ionicons name="people" size={28} color="#10B981" />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>Register as Parent</Text>
+                <Text style={styles.cardDesc}>Add students to track their live journey daily.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#10B981" />
+            </LinearGradient>
           </TouchableOpacity>
 
+          {/* Attendant Card */}
           <TouchableOpacity 
-            style={[styles.regCard, { borderLeftColor: '#8B5CF6' }]} 
-            activeOpacity={0.7}
+            style={styles.regCard} 
+            activeOpacity={0.8}
             onPress={handleAttendantRegistration}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#EDE9FE' }]}>
-              <Ionicons name="shield-checkmark" size={28} color="#8B5CF6" />
-            </View>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>Register as Attendant</Text>
-              <Text style={styles.cardDesc}>Help with on-board student safety and attendance.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+            <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.05)']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.cardInner}>
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                <Ionicons name="shield-checkmark" size={28} color="#8B5CF6" />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>Register as Attendant</Text>
+                <Text style={styles.cardDesc}>Monitor on-board safety and attendance.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#8B5CF6" />
+            </LinearGradient>
           </TouchableOpacity>
 
-          {/* Help Card */}
           <View style={styles.helpContainer}>
-              <Ionicons name="information-circle" size={20} color="#94A3B8" />
-              <Text style={styles.helpText}>Registration takes less than 2 minutes.</Text>
+              <Ionicons name="information-circle-outline" size={18} color="#64748B" />
+              <Text style={styles.helpText}>Takes less than 2 minutes to complete.</Text>
           </View>
-        </View>
+        </Animated.View>
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#0F172A' },
   scrollContent: { paddingBottom: 50 },
   
-  bannerContainer: { height: 320, position: 'relative' },
-  bannerImage: { width: '100%', height: '100%', borderBottomLeftRadius: 40, borderBottomRightRadius: 40 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30, 41, 59, 0.4)', padding: 30, justifyContent: 'space-between' },
-  backBtn: { marginTop: 40, width: 45, height: 45, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  headerTitleWrapper: { marginBottom: 30 },
-  mainTitle: { fontSize: 32, fontWeight: '900', color: '#fff' },
-  mainSubtitle: { fontSize: 16, color: '#f1f5f9', marginTop: 4, fontWeight: '500' },
-
-  content: { paddingHorizontal: 25, marginTop: 30 },
-  sectionHeading: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 20 },
-
-  regCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderLeftWidth: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+  // Hero
+  heroArea: { height: 420, position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject },
+  
+  navHeader: { position: 'absolute', top: 50, left: 20 },
+  backBtn: { 
+    width: 48, height: 48, borderRadius: 24, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'
   },
-  iconBox: { width: 55, height: 55, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  cardInfo: { flex: 1, marginLeft: 16, marginRight: 8 },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: '#1E293B' },
-  cardDesc: { fontSize: 12, color: '#64748B', marginTop: 4, lineHeight: 18 },
+  
+  heroText: { position: 'absolute', bottom: 40, left: 30, right: 30 },
+  mainTitle: { fontSize: 40, fontWeight: '900', color: '#fff', lineHeight: 46 },
+  mainSubtitle: { fontSize: 16, color: '#94A3B8', marginTop: 12, fontWeight: '500', lineHeight: 24 },
 
-  helpContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, opacity: 0.8 },
-  helpText: { color: '#94A3B8', fontSize: 13, fontWeight: '500' },
+  // Content
+  content: { paddingHorizontal: 25, marginTop: 10 },
+  sectionHeading: { fontSize: 18, fontWeight: '800', color: '#F1F5F9', marginBottom: 20, letterSpacing: 0.5 },
+
+  regCard: { marginBottom: 16, height: 110 },
+  cardInner: { 
+    flex: 1, borderRadius: 32, paddingHorizontal: 20, 
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)'
+  },
+  iconBox: { width: 64, height: 64, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  cardInfo: { flex: 1, marginLeft: 20, marginRight: 10 },
+  cardTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC' },
+  cardDesc: { fontSize: 12, color: '#64748B', marginTop: 4, lineHeight: 18, fontWeight: '500' },
+
+  helpContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 25, opacity: 0.7 },
+  helpText: { color: '#94A3B8', fontSize: 13, fontWeight: '600' },
 });

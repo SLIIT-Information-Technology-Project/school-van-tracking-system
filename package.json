@@ -1,0 +1,24 @@
+{
+  "name": "school-van-tracking-system",
+  "version": "1.0.0",
+  "description": "School Van Tracking System - Backend + Frontend",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "MyFirstApp"
+  ],
+  "scripts": {
+    "start": "npm run backend:start",
+    "backend:start": "npm start -w backend",
+    "backend:prod": "npm run prod -w backend",
+    "frontend:start": "npm start -w MyFirstApp",
+    "frontend:android": "npm run android -w MyFirstApp",
+    "frontend:ios": "npm run ios -w MyFirstApp",
+    "frontend:web": "npm run web -w MyFirstApp",
+    "lint": "npm run lint --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

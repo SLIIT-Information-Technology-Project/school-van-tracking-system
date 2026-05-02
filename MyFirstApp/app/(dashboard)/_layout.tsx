@@ -76,6 +76,57 @@ export default function DashboardLayout() {
         theme={theme}
         onThemeChange={toggleTheme}
       />
+<<<<<<< HEAD
+      <Tabs.Screen
+        name="system"
+        options={{
+          title: 'System',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bus-school" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          title: 'Attendance',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="chat" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="payments"
+        options={{
+          title: 'Payments',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="credit-card" size={size} color={color} />
+          ),
+        }}
+      />
+      
+      {/* Notifications tab — visible only for Parents */}
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null,
+          title: 'Notifications',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bell-outline" size={size} color={color} />
+          ),
+        }}
+      />
+=======
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
     </>
   );
 }

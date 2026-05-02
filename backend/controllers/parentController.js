@@ -9,7 +9,7 @@ import { supabase } from "../utils/supabase.js";
 export const registerParent = async (req, res) => {
   try {
     console.log("[Backend] registerParent body:", req.body);
-    const { name, email, password } = req.body;
+    const { name, email, username, password } = req.body;
 
     const errors = [];
     if (!name || name.trim().length < 2)         errors.push("Full name is required (at least 2 characters).");
@@ -24,10 +24,12 @@ export const registerParent = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Insert into 'users' table with role = 'parent'
-    const { data, error } = await supabase
+    // Insertion
+    let insertResult = await supabase
       .from("users")
       .insert([{
         name:          name.trim(),
+        username:      username ? username.trim().toLowerCase() : null,
         email:         email.trim().toLowerCase(),
         password_hash: passwordHash,
         role:          "parent",
@@ -35,13 +37,29 @@ export const registerParent = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("Supabase error (registerParent):", error);
-      if (error.code === "23505") {
-        return res.status(409).json({ message: "This email address is already registered." });
-      }
-      throw error;
+    // Fallback if 'username' column is missing in DB
+    if (insertResult.error && insertResult.error.code === '42703') {
+       console.warn("[Backend] Parent registration: username column missing, retrying without it");
+       insertResult = await supabase
+         .from("users")
+         .insert([{
+           name:          name.trim(),
+           email:         email.trim().toLowerCase(),
+           password_hash: passwordHash,
+           role:          "parent",
+         }])
+         .select()
+         .single();
     }
+
+    if (insertResult.error) {
+      if (insertResult.error.code === "23505") { // Unique constraint violation
+        return res.status(400).json({ message: "Email already exists." });
+      }
+      throw insertResult.error;
+    }
+
+    const data = insertResult.data;
 
     return res.status(201).json({
       message: "Parent registered successfully!",
@@ -67,19 +85,70 @@ export const loginParent = async (req, res) => {
   try {
     const { email, input, password } = req.body;
     const identifier = (email || input || "").trim().toLowerCase();
-
+    
     if (!identifier || !password) {
       return res.status(400).json({ message: "Please provide your email and password." });
     }
+    console.log(`[Backend] Parent login attempt: ${identifier}`);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+    // 1. Find user (any role)
+    let { data: user, error } = await supabase
+=======
+    // Find user by email AND role = 'parent'
+    console.log(`[Backend] Attempting login for identifier: ${identifier} (role: parent)`);
+=======
     // Find user by email ONLY first (to diagnose role mismatch better)
     console.log(`[Backend] Attempting login for identifier: ${identifier}`);
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
     const { data: user, error } = await supabase
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
       .from("users")
       .select("*")
+<<<<<<< HEAD
+      .or(`email.eq."${identifier}",username.eq."${identifier}"`)
+      .maybeSingle();
+=======
       .eq("email", identifier)
       .single();
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
 
+<<<<<<< HEAD
+    // Fallback if username column missing
+    if (error && error.code === '42703') {
+       console.warn("[Backend] username column missing, failing over to email search");
+       const res = await supabase
+         .from("users")
+         .select("*")
+         .eq("email", identifier)
+         .maybeSingle();
+       user = res.data;
+       error = res.error;
+    }
+
+    if (error) {
+      console.error("[Backend] Parent database error:", error.message);
+    }
+
+    if (!user) {
+      console.info(`[Backend] User not found: ${identifier}`);
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // 2. Check role
+    if (user.role !== "parent") {
+      console.info(`[Backend] Role mismatch: ${identifier} is ${user.role}, not parent`);
+      return res.status(403).json({ 
+        message: `This account is registered as a ${user.role}. Please use the ${user.role} login portal.` 
+      });
+    }
+
+    // 3. Verify password
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      console.info(`[Backend] Password mismatch: ${identifier}`);
+=======
     if (error || !user) {
       console.warn(`[Backend] Login aborted: Email not found for ${identifier}.`);
       return res.status(401).json({ message: "Invalid email or password." });
@@ -94,7 +163,12 @@ export const loginParent = async (req, res) => {
     console.log(`[Backend] User found: ${user.email} (Role: ${user.role}). Comparing passwords...`);
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+<<<<<<< HEAD
+      console.warn(`[Backend] Login failed: Password mismatch for ${identifier}.`);
+>>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
+=======
       console.warn(`[Backend] Login aborted: Password mismatch for ${identifier}.`);
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
       return res.status(401).json({ message: "Invalid email or password." });
     }
     console.log(`[Backend] Login successful for: ${user.email}`);
