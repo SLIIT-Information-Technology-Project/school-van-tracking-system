@@ -19,7 +19,12 @@
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.100.0",
     "axios": "^1.13.6",
+<<<<<<< HEAD
     "expo": "^54.0.33",
+=======
+    "expo": "~54.0.33",
+    "expo-clipboard": "~8.0.8",
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.8",
     "expo-font": "~14.0.11",

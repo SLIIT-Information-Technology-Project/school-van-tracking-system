@@ -115,9 +115,9 @@ export default function MyChildrenScreen() {
   };
 
   const isDark = theme === 'dark';
-  const bgColor = isDark ? '#0F172A' : '#F8FAFC';
+  const bgColor = isDark ? '#0F172A' : '#FFFFFF';
   const cardColor = isDark ? '#1E293B' : '#FFFFFF';
-  const textColor = isDark ? '#F1F5F9' : '#1E293B';
+  const textColor = isDark ? '#F1F5F9' : '#000000';
   const subTextColor = isDark ? '#94A3B8' : '#64748B';
 
   return (
@@ -172,6 +172,21 @@ export default function MyChildrenScreen() {
                     <Ionicons name="school-outline" size={14} color="#94A3B8" />
                     <Text style={styles.locText}>Dropoff: {child.dropoff_location || 'Not set'}</Text>
                   </View>
+                  <View style={[styles.locRow, { marginTop: 5 }]}>
+                    <Ionicons name="cash-outline" size={14} color="#94A3B8" />
+                    <Text style={[styles.locText, { fontWeight: 'bold' }]}>Payment: </Text>
+                    <View style={[
+                      styles.paymentBadge, 
+                      { backgroundColor: (child.payment_status === 'Paid') ? '#DCFCE7' : '#FEE2E2' }
+                    ]}>
+                      <Text style={[
+                        styles.paymentBadgeText, 
+                        { color: (child.payment_status === 'Paid') ? '#166534' : '#991B1B' }
+                      ]}>
+                        {(child.payment_status || 'Pending').toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
             ))
@@ -194,7 +209,7 @@ export default function MyChildrenScreen() {
             
             <Text style={styles.label}>Full Name</Text>
             <TextInput 
-              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#F8FAFC', color: textColor }]}
+              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#FFFFFF', color: textColor }]}
               value={form.name}
               onChangeText={t => setForm({...form, name: t})}
               placeholder="Enter child's name"
@@ -203,7 +218,7 @@ export default function MyChildrenScreen() {
 
             <Text style={styles.label}>School</Text>
             <TextInput 
-              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#F8FAFC', color: textColor }]}
+              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#FFFFFF', color: textColor }]}
               value={form.school}
               onChangeText={t => setForm({...form, school: t})}
               placeholder="School name"
@@ -214,7 +229,7 @@ export default function MyChildrenScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Grade</Text>
                 <TextInput 
-                  style={[styles.input, { backgroundColor: isDark ? '#334155' : '#F8FAFC', color: textColor }]}
+                  style={[styles.input, { backgroundColor: isDark ? '#334155' : '#FFFFFF', color: textColor }]}
                   value={form.grade}
                   onChangeText={t => setForm({...form, grade: t})}
                   placeholder="e.g. 5"
@@ -225,7 +240,7 @@ export default function MyChildrenScreen() {
 
             <Text style={styles.label}>Pickup Location (optional)</Text>
             <TextInput 
-              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#F8FAFC', color: textColor }]}
+              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#FFFFFF', color: textColor }]}
               value={form.pickupLocation}
               onChangeText={t => setForm({...form, pickupLocation: t})}
               placeholder="Home address or landmarks"
@@ -234,7 +249,7 @@ export default function MyChildrenScreen() {
 
             <Text style={styles.label}>Dropoff Location (optional)</Text>
             <TextInput 
-              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#F8FAFC', color: textColor }]}
+              style={[styles.input, { backgroundColor: isDark ? '#334155' : '#FFFFFF', color: textColor }]}
               value={form.dropoffLocation}
               onChangeText={t => setForm({...form, dropoffLocation: t})}
               placeholder="After school dropoff point"
@@ -281,6 +296,8 @@ const styles = StyleSheet.create({
   locationInfo: { gap: 8 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   locText: { fontSize: 13, color: '#64748B' },
+  paymentBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginLeft: 2 },
+  paymentBadgeText: { fontSize: 10, fontWeight: 'bold' },
   empty: { alignItems: 'center', marginTop: 100, opacity: 0.5 },
   emptyText: { marginTop: 15, fontSize: 16, color: '#94A3B8' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

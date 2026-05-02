@@ -52,6 +52,47 @@ export const createSystem = async (req, res) => {
   }
 };
 
+// Function: Delete a transportation system
+export const deleteSystem = async (req, res) => {
+  try {
+    const { systemId } = req.params;
+
+    if (!systemId) {
+      return res.status(400).json({ message: "System ID is required." });
+    }
+
+    // 1. Notify parents and staff before deletion (optional but good)
+    try {
+      await notifyParents(systemId, "The transportation system has been disbanded by the driver.", "system_deleted");
+    } catch (notifyErr) {
+      console.log("[deleteSystem] Notification error (ignoring):", notifyErr.message);
+    }
+
+    // 2. Clear system links for students
+    const { error: studentError } = await supabase
+      .from('students')
+      .update({ system_id: null })
+      .eq('system_id', systemId);
+
+    if (studentError) {
+      console.error("[deleteSystem] Error clearing student system links:", studentError);
+    }
+
+    // 3. Delete the system (Cascades should handle system_parents and system_attendants)
+    const { error: deleteError } = await supabase
+      .from('transportation_systems')
+      .delete()
+      .eq('id', systemId);
+
+    if (deleteError) throw deleteError;
+
+    res.status(200).json({ message: "System deleted successfully." });
+  } catch (error) {
+    console.error("[deleteSystem] Error:", error);
+    res.status(500).json({ message: "Error deleting system", error: error.message });
+  }
+};
+
 // Function: Get all systems created by a driver
 export const getDriverSystems = async (req, res) => {
   try {
@@ -138,7 +179,9 @@ export const getSystemById = async (req, res) => {
             email: userData.email,
             is_present: attEntry.is_present || false,
             has_control: attEntry.has_control || false,
-            can_view_activities: attEntry.can_view_activities || false
+            can_view_activities: attEntry.can_view_activities || false,
+            can_view_payments: attEntry.can_view_payments || false,
+            can_edit_payments: attEntry.can_edit_payments || false
           };
         }
       }
@@ -691,6 +734,56 @@ export const updateAttendantActivityAccess = async (req, res) => {
   }
 };
 
+// Function: Update attendant payment access status
+export const updateAttendantPaymentAccess = async (req, res) => {
+  try {
+    const { attendantId } = req.params;
+    const { canViewPayments, canEditPayments } = req.body;
+
+    // 1. Fetch current entry
+    const { data: attEntry, error: fetchError } = await supabase
+      .from('system_attendants')
+      .select('system_id')
+      .eq('attendant_id', attendantId)
+      .single();
+
+    if (fetchError || !attEntry) {
+      return res.status(404).json({ message: "Attendant not found in any system." });
+    }
+
+    // 2. Validation: canEditPayments can only be true if canViewPayments is true
+    const finalCanEdit = canViewPayments ? canEditPayments : false;
+
+    // 3. Update status
+    const { error: updateError } = await supabase
+      .from('system_attendants')
+      .update({ 
+        can_view_payments: canViewPayments,
+        can_edit_payments: finalCanEdit
+      })
+      .eq('attendant_id', attendantId);
+
+    if (updateError) throw updateError;
+
+    // 4. Notify attendant
+    await supabase.from('notifications').insert([{
+      user_id: attendantId,
+      system_id: attEntry.system_id,
+      message: `Your payment access permissions have been updated.`,
+      type: 'payment_access_update'
+    }]);
+
+    res.status(200).json({ 
+      message: `Payment access updated successfully.`, 
+      can_view_payments: canViewPayments,
+      can_edit_payments: finalCanEdit
+    });
+  } catch (error) {
+    console.error("[updateAttendantPaymentAccess] Error:", error);
+    res.status(500).json({ message: "Error updating payment access", error: error.message });
+  }
+};
+
 // Function: Update system route details (Manual Selection)
 export const updateSystemRouteMap = async (req, res) => {
   try {
@@ -746,7 +839,6 @@ export const updateSystemRouteMap = async (req, res) => {
     res.status(500).json({ message: "Error updating route map", error: error.message });
   }
 };
-
 // HELPER: Notify all staff (Driver + Attendants) of a system
 export const notifyStaff = async (systemId, message, type = 'system_update', excludeId = null) => {
   try {

@@ -22,15 +22,8 @@ interface Question {
 
 const questions: Question[] = [
   { id: 'name',             type: 'text',     text: "Hello! Let's get you registered as a Parent. What is your full name?" },
-  { id: 'username',         type: 'text',     text: 'Choose a username (e.g. mary_parent).' },
-  { id: 'phone',            type: 'phone',    text: 'What is your phone number?' },
   { id: 'email',            type: 'email',    text: 'What is your email address?' },
   { id: 'password',         type: 'password', text: 'Please enter a secure password (min 6 characters).' },
-  { id: 'childName',        type: 'text',     text: "What is your child's full name?" },
-  { id: 'childGrade',       type: 'text',     text: "What is your child's grade or class? (e.g. Grade 5)" },
-  { id: 'pickupLocation',   type: 'text',     text: 'What is the pickup location for your child?' },
-  { id: 'dropLocation',     type: 'text',     text: 'What is the drop-off location?' },
-  { id: 'emergencyContact', type: 'phone',    text: 'Finally, what is your emergency contact number?' },
 ];
 
 export default function ParentRegistration() {
@@ -100,9 +93,25 @@ export default function ParentRegistration() {
   const currentQ = questions[currentStep];
 
   return (
+<<<<<<< HEAD
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <LinearGradient colors={['#064e3b', '#065f46', '#047857']} style={StyleSheet.absoluteFillObject} />
+=======
+    <KeyboardAvoidingView style={styles.container} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}>
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={[styles.bubble, item.sender === 'user' ? styles.userBubble : styles.botBubble]}>
+            <Text style={[styles.bubbleText, item.sender === 'user' && styles.userBubbleText]}>{item.text}</Text>
+          </View>
+        )}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        contentContainerStyle={styles.chatContainer}
+      />
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
 
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
@@ -178,6 +187,7 @@ export default function ParentRegistration() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   container: { flex: 1, backgroundColor: '#064e3b' },
   header: { flexDirection: 'row', padding: 20, alignItems: 'center', marginTop: 10 },
   backBtn: { marginRight: 15 },
@@ -230,4 +240,24 @@ const styles = StyleSheet.create({
   submitBtnText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 1 },
   resetBtn: { alignItems: 'center', paddingVertical: 10 },
   resetText: { color: '#D1FAE5', fontSize: 14, fontWeight: '700', textDecorationLine: 'underline', opacity: 0.8 },
+=======
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  chatContainer: { padding: 16, paddingBottom: 24 },
+  bubble: { maxWidth: '80%', padding: 14, borderRadius: 20, marginBottom: 12 },
+  botBubble: { backgroundColor: '#FFFFFF', alignSelf: 'flex-start', borderBottomLeftRadius: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
+  userBubble: { backgroundColor: '#10B981', alignSelf: 'flex-end', borderBottomRightRadius: 4 },
+  bubbleText: { fontSize: 16, color: '#334155' },
+  userBubbleText: { color: '#FFFFFF' },
+  inputContainer: { padding: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  textInputRow: { flexDirection: 'row' },
+  input: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 24, paddingHorizontal: 20, paddingVertical: 12, fontSize: 16, marginRight: 10 },
+  sendButton: { backgroundColor: '#10B981', borderRadius: 24, justifyContent: 'center', paddingHorizontal: 20 },
+  sendButtonDisabled: { backgroundColor: '#94A3B8' },
+  sendButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+  submitButton: { backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
+  submitButtonDisabled: { backgroundColor: '#6EE7B7' },
+  submitButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
+  resetButton: { marginTop: 10, paddingVertical: 12, alignItems: 'center' },
+  resetButtonText: { color: '#64748B', fontSize: 14, textDecorationLine: 'underline' },
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
 });

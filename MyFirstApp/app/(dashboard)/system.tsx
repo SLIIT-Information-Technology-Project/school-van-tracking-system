@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../services/supabase';
 import api from '../../services/api';
 
@@ -27,6 +28,8 @@ export default function SystemScreen() {
   const [isStudentModalVisible, setIsStudentModalVisible] = useState(false);
   const [studentActivities, setStudentActivities] = useState<any[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSetPickupModalVisible, setIsSetPickupModalVisible] = useState(false);
 
   // Tracking state (for Parent)
   const [vanLocation, setVanLocation] = useState<any>(null);
@@ -68,7 +71,7 @@ export default function SystemScreen() {
 
       setRole(currentRole);
       setUserId(currentId);
-      await fetchSystemDetails();
+      await fetchSystemDetails(currentRole, currentId);
     } catch (error) {
       console.log('Error loading initial data', error);
     } finally {
@@ -76,18 +79,21 @@ export default function SystemScreen() {
     }
   };
 
-  const fetchSystemDetails = async () => {
+  const fetchSystemDetails = async (cRole?: string, cId?: string) => {
     try {
+      const activeRole = cRole || role;
+      const activeId = cId || userId;
+
       const response = await api.get(`/system/${systemId}`);
       const data = response.data.system;
       setSystem(data);
 
       if (data) {
         fetchSystemStudents(data.id);
-        if (role === 'Driver') fetchSystemParents(data.id);
+        if (activeRole === 'Driver' || activeRole === 'Attendant') fetchSystemParents(data.id);
         
         // Setup tracking for parents
-        if (role === 'Parent' && data.driver_id) {
+        if (activeRole === 'Parent' && data.driver_id) {
           startTracking(data.driver_id);
         }
       }
@@ -173,6 +179,51 @@ export default function SystemScreen() {
     setSelectedChildren(prev => 
       prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
     );
+  };
+
+  const handleCopyJoinCode = async () => {
+    if (!system?.join_code) return;
+    await Clipboard.setStringAsync(system.join_code);
+    Alert.alert('Copied', 'Join code copied to clipboard!');
+  };
+
+  const handleDeleteSystem = async () => {
+    Alert.alert(
+      "Delete System",
+      "Are you sure you want to PERMANENTLY delete this transportation system? This will remove all parent and student links.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
+              await api.delete(`/system/${systemId}`);
+              Alert.alert('Success', 'System deleted successfully');
+              router.replace('/home' as any);
+            } catch (error) {
+              Alert.alert('Error', 'Could not delete system');
+              setIsDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSetPickupLocation = async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      await api.put(`/system/${systemId}/parent/${userId}/pickup`, { lat, lng });
+      Alert.alert('Success', 'Pickup location updated!');
+      setIsSetPickupModalVisible(false);
+      fetchSystemDetails();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update pickup location');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startTracking = (driverId: string) => {
@@ -333,9 +384,85 @@ export default function SystemScreen() {
     }
   };
 
+  const handleTogglePaymentView = async () => {
+    if (!system.attendant) return;
+    try {
+      const newViewStatus = !system.attendant.can_view_payments;
+      const newEditStatus = newViewStatus ? system.attendant.can_edit_payments : false;
+      setLoading(true);
+      await api.put(`/system/attendant/${system.attendant.id}/payment-access`, { 
+        canViewPayments: newViewStatus,
+        canEditPayments: newEditStatus
+      });
+      await fetchSystemDetails();
+      Alert.alert('Success', `Payment View Access ${newViewStatus ? 'Granted' : 'Revoked'}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Could not update payment view access');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTogglePaymentEdit = async () => {
+    if (!system.attendant || !system.attendant.can_view_payments) return;
+    try {
+      const newEditStatus = !system.attendant.can_edit_payments;
+      setLoading(true);
+      await api.put(`/system/attendant/${system.attendant.id}/payment-access`, { 
+        canViewPayments: true,
+        canEditPayments: newEditStatus
+      });
+      await fetchSystemDetails();
+      Alert.alert('Success', `Payment Edit Access ${newEditStatus ? 'Granted' : 'Revoked'}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Could not update payment edit access');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (studentId: string, status: string) => {
+    try {
+      setLoading(true);
+      await api.put(`/students/${studentId}/payment`, { 
+        paymentStatus: status,
+        role,
+        userId,
+        systemId: system.id
+      });
+      Alert.alert('Success', `Payment status marked as ${status}`);
+      // Refresh system students to get updated data
+      await fetchSystemStudents(systemId as string);
+      // Also update selected student if modal is open
+      if (selectedStudent && selectedStudent.id === studentId) {
+        setSelectedStudent({ ...selectedStudent, payment_status: status });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Could not update payment status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendPaymentReminder = async (studentId: string) => {
+    try {
+      setLoading(true);
+      await api.post(`/students/${studentId}/reminder`, { 
+        role,
+        userId,
+        systemId: system.id
+      });
+      Alert.alert('Success', 'Payment reminder sent to parent.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Could not send reminder');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading || !system) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC' }]}>
+      <View style={[styles.centered, { backgroundColor: theme === 'dark' ? '#0F172A' : '#FFFFFF' }]}>
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
@@ -347,16 +474,16 @@ export default function SystemScreen() {
   const accentColor = isParent ? '#10B981' : isAttendant ? '#8B5CF6' : '#3B82F6';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#FFFFFF' }]}>
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={theme === 'dark' ? '#fff' : '#1E293B'} />
+          <Ionicons name="arrow-back" size={24} color={theme === 'dark' ? '#fff' : '#000000'} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.name}</Text>
+          <Text style={[styles.headerTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.name}</Text>
           <Text style={styles.headerSub}>{system.plate_number}</Text>
         </View>
         <View style={styles.headerPlaceholder} />
@@ -394,56 +521,63 @@ export default function SystemScreen() {
 
           {isDriver && (
             <View style={styles.joinCodeBox}>
-              <Text style={styles.joinCodeLabel}>Join Code for Parents:</Text>
-              <Text style={[styles.joinCodeText, { color: accentColor }]}>{system.join_code}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.joinCodeLabel}>Join Code for Parents:</Text>
+                <Text style={[styles.joinCodeText, { color: accentColor }]}>{system.join_code}</Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.copyBtn, { backgroundColor: accentColor + '20' }]} 
+                onPress={handleCopyJoinCode}
+              >
+                <Ionicons name="copy-outline" size={20} color={accentColor} />
+                <Text style={[styles.copyBtnText, { color: accentColor }]}>Copy</Text>
+              </TouchableOpacity>
             </View>
           )}
 
-          {/* DRIVER & VEHICLE DETAILS (For Parents/Attendants) */}
-          {(isParent || isAttendant) && (
-            <View style={styles.detailsList}>
-              <View style={styles.detailRow}>
-                <Ionicons name="person" size={18} color={accentColor} />
-                <View style={styles.detailTextCol}>
-                  <Text style={styles.detailLabel}>Driver</Text>
-                  <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.driver?.name || 'N/A'}</Text>
-                  {system.driver?.phone && <Text style={styles.detailSubValue}>{system.driver.phone}</Text>}
-                </View>
+          {/* DRIVER & VEHICLE DETAILS (For All Roles) */}
+          <View style={styles.detailsList}>
+            <View style={styles.detailRow}>
+              <Ionicons name="person" size={18} color={accentColor} />
+              <View style={styles.detailTextCol}>
+                <Text style={styles.detailLabel}>Driver</Text>
+                <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.driver?.name || 'N/A'}</Text>
+                {system.driver?.phone && <Text style={styles.detailSubValue}>{system.driver.phone}</Text>}
               </View>
-
-              <View style={styles.detailRow}>
-                <Ionicons name="bus" size={18} color={accentColor} />
-                <View style={styles.detailTextCol}>
-                  <Text style={styles.detailLabel}>Vehicle</Text>
-                  <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>
-                    {system.vehicle?.plate_number || system.plate_number}
-                  </Text>
-                  <Text style={styles.detailSubValue}>
-                    {system.vehicle?.model || system.vehicle_type} 
-                    {system.vehicle?.color ? ` • ${system.vehicle.color}` : ''}
-                  </Text>
-                </View>
-              </View>
-
-              {system.attendant && (
-                <View style={[styles.detailRow, { marginTop: 15 }]}>
-                  <Ionicons name="id-card" size={18} color={accentColor} />
-                  <View style={styles.detailTextCol}>
-                    <Text style={styles.detailLabel}>Attendant</Text>
-                    <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.attendant.name}</Text>
-                    <Text style={styles.detailSubValue}>{system.attendant.email}</Text>
-                  </View>
-                </View>
-              )}
             </View>
-          )}
+
+            <View style={styles.detailRow}>
+              <Ionicons name="bus" size={18} color={accentColor} />
+              <View style={styles.detailTextCol}>
+                <Text style={styles.detailLabel}>Vehicle</Text>
+                <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>
+                  {system.vehicle?.plate_number || system.plate_number}
+                </Text>
+                <Text style={styles.detailSubValue}>
+                  {system.vehicle?.model || system.vehicle_type} 
+                  {system.vehicle?.color ? ` • ${system.vehicle.color}` : ''}
+                </Text>
+              </View>
+            </View>
+
+            {system.attendant && (
+              <View style={[styles.detailRow, { marginTop: 15 }]}>
+                <Ionicons name="id-card" size={18} color={accentColor} />
+                <View style={styles.detailTextCol}>
+                  <Text style={styles.detailLabel}>Attendant</Text>
+                  <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.attendant.name}</Text>
+                  <Text style={styles.detailSubValue}>{system.attendant.email}</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
         
         {/* ATTENDANT MANAGEMENT (Driver Only) */}
         {isDriver && system.attendant && (
           <View style={[styles.card, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
             <View style={styles.cardHeaderSmall}>
-              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B', marginBottom: 0 }]}>Attendant Status</Text>
+              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000', marginBottom: 0 }]}>Attendant Status</Text>
               <View style={[styles.presenceBadge, { backgroundColor: system.attendant.is_present ? '#DCFCE7' : '#FEE2E2' }]}>
                 <Text style={[styles.presenceText, { color: system.attendant.is_present ? '#166534' : '#991B1B' }]}>
                   {system.attendant.is_present ? 'PRESENT' : 'NOT PRESENT'}
@@ -452,7 +586,7 @@ export default function SystemScreen() {
             </View>
             <View style={styles.attendantInfoRow}>
               <View style={styles.attendantMain}>
-                <Text style={[styles.attendantNameLabel, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.attendant.name}</Text>
+                <Text style={[styles.attendantNameLabel, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.attendant.name}</Text>
                 <Text style={styles.attendantEmailLabel}>{system.attendant.email}</Text>
               </View>
               <View style={styles.controlToggleContainer}>
@@ -483,6 +617,33 @@ export default function SystemScreen() {
                     <View style={[styles.toggleThumb, { marginLeft: system.attendant.can_view_activities ? 22 : 2 }]} />
                   </TouchableOpacity>
                 </View>
+
+                <View style={[styles.toggleRow, { marginTop: 10 }]}>
+                  <Text style={styles.toggleLabel}>View Payments</Text>
+                  <TouchableOpacity 
+                    onPress={handleTogglePaymentView}
+                    style={[
+                      styles.toggleSwitch, 
+                      { backgroundColor: system.attendant.can_view_payments ? '#10B981' : '#94A3B8' }
+                    ]}
+                  >
+                    <View style={[styles.toggleThumb, { marginLeft: system.attendant.can_view_payments ? 22 : 2 }]} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={[styles.toggleRow, { marginTop: 10, opacity: system.attendant.can_view_payments ? 1 : 0.5 }]}>
+                  <Text style={styles.toggleLabel}>Change Payments</Text>
+                  <TouchableOpacity 
+                    onPress={handleTogglePaymentEdit}
+                    disabled={!system.attendant.can_view_payments}
+                    style={[
+                      styles.toggleSwitch, 
+                      { backgroundColor: system.attendant.can_edit_payments ? '#EF4444' : '#94A3B8' }
+                    ]}
+                  >
+                    <View style={[styles.toggleThumb, { marginLeft: system.attendant.can_edit_payments ? 22 : 2 }]} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
             {!system.attendant.is_present && (
@@ -500,7 +661,7 @@ export default function SystemScreen() {
                 size={24} 
                 color={system.attendant?.has_control ? "#3B82F6" : "#F59E0B"} 
               />
-              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B', marginBottom: 0, marginLeft: 10 }]}>
+              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000', marginBottom: 0, marginLeft: 10 }]}>
                 System Access
               </Text>
             </View>
@@ -524,7 +685,7 @@ export default function SystemScreen() {
         {/* QUICK ALERTS (Driver/Attendant Only) */}
         {(isDriver || isAttendant) && (
           <View style={[styles.card, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
-            <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Quick Alerts</Text>
+            <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Quick Alerts</Text>
             <View style={[styles.alertGrid, isAttendant && !system.attendant?.has_control && { opacity: 0.5 }]}>
               <TouchableOpacity style={[styles.alertBtn, { backgroundColor: '#FFF7ED' }]} onPress={() => sendAlert('Delay', 'System is delayed.')}>
                 <Ionicons name="time" size={24} color="#C2410C" />
@@ -559,7 +720,7 @@ export default function SystemScreen() {
         {isParent && (
           <View style={[styles.card, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff', padding: 0, overflow: 'hidden' }]}>
             <View style={styles.cardHeader}>
-              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Live Location</Text>
+              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Live Location</Text>
               <View style={styles.liveBadge}>
                 <View style={[styles.liveDot, { backgroundColor: vanLocation ? '#10B981' : '#94A3B8' }]} />
                 <Text style={styles.liveText}>{vanLocation ? 'LIVE' : 'OFFLINE'}</Text>
@@ -583,6 +744,16 @@ export default function SystemScreen() {
                     </View>
                   </Marker>
                 )}
+                {parents.find(p => p.parent_id === userId)?.pickup_lat && (
+                   <Marker 
+                    coordinate={{ 
+                      latitude: parseFloat(parents.find(p => p.parent_id === userId).pickup_lat), 
+                      longitude: parseFloat(parents.find(p => p.parent_id === userId).pickup_lng) 
+                    }}
+                    title="My Pickup Location"
+                    pinColor="#10B981"
+                   />
+                )}
                 {system.start_lat && (
                   <Marker 
                     coordinate={{ latitude: parseFloat(system.start_lat), longitude: parseFloat(system.start_lng) }}
@@ -599,19 +770,28 @@ export default function SystemScreen() {
                 )}
               </MapView>
             </View>
+            <TouchableOpacity 
+              style={[styles.setPickupBtn, { backgroundColor: theme === 'dark' ? '#334155' : '#F1F5F9' }]}
+              onPress={() => setIsSetPickupModalVisible(true)}
+            >
+              <Ionicons name="location" size={18} color={accentColor} />
+              <Text style={[styles.setPickupBtnText, { color: theme === 'dark' ? '#fff' : '#000000' }]}>
+                {parents.find(p => p.parent_id === userId)?.pickup_lat ? 'Change My Pickup Location' : 'Set My Pickup Location'}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {/* ROUTE INFO CARD (Visible if set) */}
         {system.start_lat && (
           <View style={[styles.card, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
-            <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Route Points</Text>
+            <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Route Points</Text>
             <View style={styles.routeSummary}>
               <View style={styles.routePoint}>
                 <View style={[styles.routeDot, { backgroundColor: '#3B82F6' }]} />
                 <View>
                   <Text style={styles.routePointLabel}>START</Text>
-                  <Text style={[styles.routePointValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.start_location_name}</Text>
+                  <Text style={[styles.routePointValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.start_location_name}</Text>
                 </View>
               </View>
               <View style={styles.routeLine} />
@@ -619,7 +799,7 @@ export default function SystemScreen() {
                 <View style={[styles.routeDot, { backgroundColor: '#EF4444' }]} />
                 <View>
                   <Text style={styles.routePointLabel}>END</Text>
-                  <Text style={[styles.routePointValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{system.end_location_name}</Text>
+                  <Text style={[styles.routePointValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{system.end_location_name}</Text>
                 </View>
               </View>
             </View>
@@ -628,7 +808,7 @@ export default function SystemScreen() {
 
         {/* STUDENTS LIST */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>
+          <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>
             Students {isParent && ' (My Children)'}
           </Text>
           <View style={styles.countBadge}><Text style={styles.countText}>{students.length}</Text></View>
@@ -651,7 +831,7 @@ export default function SystemScreen() {
               onPress={() => handleStudentClick(s)}
             >
               <View style={styles.studentInfo}>
-                <Text style={[styles.studentName, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{s.name}</Text>
+                <Text style={[styles.studentName, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{s.name}</Text>
                 <Text style={styles.studentSub}>{s.school} • Grade {s.grade}</Text>
                 <Text style={styles.studentLoc}>P: {s.pickup_location || 'N/A'}</Text>
                 <Text style={styles.studentLoc}>D: {s.dropoff_location || 'N/A'}</Text>
@@ -667,14 +847,14 @@ export default function SystemScreen() {
         {(isDriver || isAttendant) && parentsWithoutStudents.length > 0 && (
           <View style={{ marginTop: 25 }}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Parents Pending Students</Text>
+              <Text style={[styles.sectionTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Parents Pending Students</Text>
               <View style={styles.countBadge}><Text style={styles.countText}>{parentsWithoutStudents.length}</Text></View>
             </View>
             {parentsWithoutStudents.map(p => (
               <View key={p.parent_id} style={[styles.parentCard, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
                 <MaterialCommunityIcons name="account-alert" size={24} color="#F59E0B" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[styles.parentName, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{p.users?.name}</Text>
+                  <Text style={[styles.parentName, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{p.users?.name}</Text>
                   <Text style={styles.parentEmail}>{p.users?.email}</Text>
                 </View>
                 <TouchableOpacity 
@@ -710,6 +890,23 @@ export default function SystemScreen() {
           </TouchableOpacity>
         )}
 
+        {isDriver && (
+          <TouchableOpacity 
+            style={[styles.deleteSystemBtn, { borderColor: '#EF4444' }]} 
+            onPress={handleDeleteSystem}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                <Text style={styles.deleteSystemBtnText}>Delete This System</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
       </ScrollView>
 
       {/* STUDENT DETAILS MODAL */}
@@ -717,9 +914,9 @@ export default function SystemScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.studentModalContent, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Student Details</Text>
+              <Text style={[styles.modalTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Student Details</Text>
               <TouchableOpacity onPress={() => setIsStudentModalVisible(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={24} color={theme === 'dark' ? '#fff' : '#1E293B'} />
+                <Ionicons name="close" size={24} color={theme === 'dark' ? '#fff' : '#000000'} />
               </TouchableOpacity>
             </View>
 
@@ -730,7 +927,7 @@ export default function SystemScreen() {
                   <View style={[styles.profileAvatar, { backgroundColor: accentColor }]}>
                     <Text style={styles.avatarText}>{selectedStudent.name.charAt(0)}</Text>
                   </View>
-                  <Text style={[styles.detailName, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{selectedStudent.name}</Text>
+                  <Text style={[styles.detailName, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{selectedStudent.name}</Text>
                   <Text style={styles.detailSub}>{selectedStudent.school} • Grade {selectedStudent.grade}</Text>
                 </View>
 
@@ -740,7 +937,7 @@ export default function SystemScreen() {
                     <Text style={styles.detailLabel}>Parent Information</Text>
                     <View style={styles.detailCard}>
                       <Ionicons name="person-circle-outline" size={20} color={accentColor} />
-                      <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>
+                      <Text style={[styles.detailValue, { color: theme === 'dark' ? '#fff' : '#000000' }]}>
                         {selectedStudent.parent_name || 'Not Available'}
                       </Text>
                     </View>
@@ -766,6 +963,53 @@ export default function SystemScreen() {
                         <MaterialCommunityIcons name="bus-stop" size={20} color="#EF4444" />
                         <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>Mark Dropoff</Text>
                       </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* PAYMENT STATUS SECTION */}
+                {((isDriver || isAttendant) && (system.attendant?.can_view_payments || isDriver)) && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Payment Status</Text>
+                    <View style={[
+                      styles.paymentStatusCard, 
+                      { backgroundColor: selectedStudent.payment_status === 'Paid' ? '#DCFCE7' : '#FEE2E2' }
+                    ]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons 
+                            name={selectedStudent.payment_status === 'Paid' ? "checkmark-circle" : "alert-circle"} 
+                            size={24} 
+                            color={selectedStudent.payment_status === 'Paid' ? "#166534" : "#991B1B"} 
+                          />
+                          <Text style={[
+                            styles.paymentStatusText, 
+                            { color: selectedStudent.payment_status === 'Paid' ? "#166534" : "#991B1B" }
+                          ]}>
+                            {selectedStudent.payment_status || 'Pending'}
+                          </Text>
+                        </View>
+
+                        {/* Mark as Paid Button */}
+                        {(selectedStudent.payment_status !== 'Paid') && (isDriver || (isAttendant && system.attendant?.can_edit_payments)) && (
+                          <TouchableOpacity 
+                            style={styles.markPaidBtn}
+                            onPress={() => handleUpdatePaymentStatus(selectedStudent.id, 'Paid')}
+                          >
+                            <Text style={styles.markPaidBtnText}>Mark as Paid</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {/* Send Reminder Button */}
+                        {(selectedStudent.payment_status !== 'Paid') && (isDriver || (isAttendant && system.attendant?.can_view_payments)) && (
+                          <TouchableOpacity 
+                            style={[styles.markPaidBtn, { backgroundColor: '#F59E0B', marginLeft: 8 }]}
+                            onPress={() => handleSendPaymentReminder(selectedStudent.id)}
+                          >
+                            <Text style={styles.markPaidBtnText}>Send Reminder</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   </View>
                 )}
@@ -818,7 +1062,7 @@ export default function SystemScreen() {
       <Modal visible={isAddChildModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff' }]}>
-            <Text style={[styles.modalTitle, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>Select Children to Add</Text>
+            <Text style={[styles.modalTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Select Children to Add</Text>
             <Text style={styles.modalSub}>Link your registered children to this system.</Text>
             
             <View style={styles.selectionList}>
@@ -842,7 +1086,7 @@ export default function SystemScreen() {
                         />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.selectionName, { color: theme === 'dark' ? '#fff' : '#1E293B' }]}>{child.name}</Text>
+                        <Text style={[styles.selectionName, { color: theme === 'dark' ? '#fff' : '#000000' }]}>{child.name}</Text>
                         <Text style={styles.selectionSub}>
                           {isAlreadyInSystem ? "Already in this system" : (child.system_id ? "Currently in another system" : "Not linked to any system")}
                         </Text>
@@ -867,6 +1111,55 @@ export default function SystemScreen() {
                 onPress={() => handleLinkChildren(role as string, userId)}
               >
                 <Text style={styles.btnTextLong}>Add {selectedChildren.length} Child(ren)</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SET PICKUP LOCATION MODAL */}
+      <Modal visible={isSetPickupModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme === 'dark' ? '#1E293B' : '#fff', height: '70%' }]}>
+            <Text style={[styles.modalTitle, { color: theme === 'dark' ? '#fff' : '#000000' }]}>Set Pickup Location</Text>
+            <Text style={styles.modalSub}>Long-press on the map or drag the marker to set your pickup location for this van.</Text>
+            
+            <View style={{ flex: 1, borderRadius: 20, overflow: 'hidden', marginVertical: 10 }}>
+              <MapView
+                style={styles.map}
+                initialRegion={{
+                  latitude: vanLocation?.latitude || 6.9271,
+                  longitude: vanLocation?.longitude || 79.8612,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05
+                }}
+                onLongPress={(e) => {
+                  const { latitude, longitude } = e.nativeEvent.coordinate;
+                  Alert.alert("Set Location", "Confirm this as your pickup location?", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Set Location", onPress: () => handleSetPickupLocation(latitude, longitude) }
+                  ]);
+                }}
+              >
+                {parents.find(p => p.parent_id === userId)?.pickup_lat && (
+                  <Marker 
+                    draggable
+                    coordinate={{ 
+                      latitude: parseFloat(parents.find(p => p.parent_id === userId).pickup_lat), 
+                      longitude: parseFloat(parents.find(p => p.parent_id === userId).pickup_lng) 
+                    }}
+                    onDragEnd={(e) => {
+                      const { latitude, longitude } = e.nativeEvent.coordinate;
+                      handleSetPickupLocation(latitude, longitude);
+                    }}
+                  />
+                )}
+              </MapView>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsSetPickupModalVisible(false)}>
+                <Text style={styles.cancelLink}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -921,6 +1214,7 @@ const styles = StyleSheet.create({
   studentSub: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
   studentLoc: { fontSize: 11, color: '#64748B', marginTop: 1 },
   emptyText: { textAlign: 'center', color: '#94A3B8', marginTop: 10, fontStyle: 'italic' },
+
   detailSubValue: { fontSize: 12, color: '#64748B' },
   detailsList: { marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: 'rgba(148, 163, 184, 0.1)' },
   detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12 },
@@ -928,6 +1222,7 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 10, fontWeight: 'bold', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 2 },
   detailValue: { fontSize: 14, fontWeight: 'bold' },
   detailCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderRadius: 16, backgroundColor: 'rgba(148, 163, 184, 0.1)' },
+
   lockedSection: { alignItems: 'center', padding: 20, gap: 8 },
   lockedText: { color: '#94A3B8', fontSize: 13, fontStyle: 'italic' },
   mainActionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, height: 60, borderRadius: 20, marginTop: 20 },
@@ -1006,5 +1301,11 @@ const styles = StyleSheet.create({
   routeDot: { width: 10, height: 10, borderRadius: 5 },
   routePointLabel: { fontSize: 10, color: '#94A3B8', fontWeight: 'bold' },
   routePointValue: { fontSize: 14, fontWeight: 'bold' },
-  routeLine: { width: 2, height: 20, backgroundColor: '#E2E8F0', marginLeft: 4, marginVertical: 4 }
+  routeLine: { width: 2, height: 20, backgroundColor: '#E2E8F0', marginLeft: 4, marginVertical: 4 },
+  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  copyBtnText: { fontSize: 13, fontWeight: 'bold' },
+  deleteSystemBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, borderRadius: 20, borderWidth: 1, marginTop: 15, marginBottom: 20 },
+  deleteSystemBtnText: { fontWeight: 'bold', fontSize: 14, color: '#EF4444' },
+  setPickupBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: 'rgba(148,163,184,0.1)' },
+  setPickupBtnText: { fontSize: 13, fontWeight: '600' }
 });

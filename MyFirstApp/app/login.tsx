@@ -64,6 +64,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+<<<<<<< HEAD
 
       {/* ── Full-screen gradient background ── */}
       <LinearGradient
@@ -91,6 +92,30 @@ export default function LoginScreen() {
               <LinearGradient colors={['#3B82F6', '#6366F1']} style={styles.iconRingGradient}>
                 <MaterialCommunityIcons name="steering" size={36} color="#fff" />
               </LinearGradient>
+=======
+      <KeyboardAvoidingView 
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+          
+          {/* Top Banner */}
+          <View style={styles.bannerContainer}>
+            <Image 
+              source={BANNER_IMG} 
+              style={styles.bannerImage}
+              resizeMode="cover"
+            />
+            <View style={styles.overlay}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTextWrapper}>
+                <Text style={styles.title}>Driver Login</Text>
+                <Text style={styles.subtitle}>Safe routes for every student</Text>
+              </View>
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
             </View>
             <Text style={styles.heroTitle}>Driver Login</Text>
             <Text style={styles.heroSubtitle}>Safe routes for every student</Text>
@@ -190,6 +215,7 @@ const styles = StyleSheet.create({
   // Decorative blobs
   blob: { position: 'absolute', width: 200, height: 200, borderRadius: 100, opacity: 0.25 },
 
+<<<<<<< HEAD
   // Back button
   backBtn: {
     width: 44, height: 44, borderRadius: 22,
@@ -230,6 +256,10 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
     backgroundColor: 'rgba(59,130,246,0.08)',
   },
+=======
+  inputGroup: { gap: 15, marginBottom: 25 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', paddingHorizontal: 15 },
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
   inputIcon: { marginRight: 12 },
   input: { flex: 1, paddingVertical: 18, fontSize: 15, color: '#F1F5F9', fontWeight: '500' },
 

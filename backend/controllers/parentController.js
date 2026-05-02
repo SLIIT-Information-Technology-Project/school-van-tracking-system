@@ -92,17 +92,27 @@ export const loginParent = async (req, res) => {
     console.log(`[Backend] Parent login attempt: ${identifier}`);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // 1. Find user (any role)
     let { data: user, error } = await supabase
 =======
     // Find user by email AND role = 'parent'
     console.log(`[Backend] Attempting login for identifier: ${identifier} (role: parent)`);
+=======
+    // Find user by email ONLY first (to diagnose role mismatch better)
+    console.log(`[Backend] Attempting login for identifier: ${identifier}`);
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
     const { data: user, error } = await supabase
 >>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
       .from("users")
       .select("*")
+<<<<<<< HEAD
       .or(`email.eq."${identifier}",username.eq."${identifier}"`)
       .maybeSingle();
+=======
+      .eq("email", identifier)
+      .single();
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
 
 <<<<<<< HEAD
     // Fallback if username column missing
@@ -140,18 +150,27 @@ export const loginParent = async (req, res) => {
       console.info(`[Backend] Password mismatch: ${identifier}`);
 =======
     if (error || !user) {
-      console.warn(`[Backend] Login failed: User not found or error occurred for ${identifier}. Error:`, error?.message || "User not found");
+      console.warn(`[Backend] Login aborted: Email not found for ${identifier}.`);
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    console.log(`[Backend] User found: ${user.email}. Comparing passwords...`);
+    // Role verification
+    if (user.role !== "parent") {
+      console.warn(`[Backend] Login aborted: Role mismatch for ${identifier}. Expected 'parent', found '${user.role}'.`);
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    console.log(`[Backend] User found: ${user.email} (Role: ${user.role}). Comparing passwords...`);
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+<<<<<<< HEAD
       console.warn(`[Backend] Login failed: Password mismatch for ${identifier}.`);
 >>>>>>> 52be61626046d8dd6cbb81cb9e57ec573efd1789
+=======
+      console.warn(`[Backend] Login aborted: Password mismatch for ${identifier}.`);
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
       return res.status(401).json({ message: "Invalid email or password." });
     }
-
     console.log(`[Backend] Login successful for: ${user.email}`);
 
     const token = jwt.sign(

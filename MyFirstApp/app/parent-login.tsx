@@ -64,6 +64,7 @@ export default function ParentLoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+<<<<<<< HEAD
 
       {/* ── Full-screen gradient background ── */}
       <LinearGradient
@@ -91,6 +92,25 @@ export default function ParentLoginScreen() {
               <LinearGradient colors={['#10B981', '#059669']} style={styles.iconRingGradient}>
                 <Ionicons name="people" size={36} color="#fff" />
               </LinearGradient>
+=======
+      <KeyboardAvoidingView 
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+          
+          <View style={styles.bannerContainer}>
+            <Image source={BANNER_IMG} style={styles.bannerImage} resizeMode="cover" />
+            <View style={styles.overlay}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTextWrapper}>
+                <Text style={styles.title}>Parent Portal</Text>
+                <Text style={styles.subtitle}>Welcome back! Real-time peace of mind.</Text>
+              </View>
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
             </View>
             <Text style={styles.heroTitle}>Parent Portal</Text>
             <Text style={styles.heroSubtitle}>Real-time peace of mind for parents</Text>
@@ -182,6 +202,7 @@ export default function ParentLoginScreen() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   safeArea: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingBottom: 40 },
 
@@ -233,6 +254,23 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
     backgroundColor: 'rgba(16,185,129,0.1)',
   },
+=======
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollContent: { flexGrow: 1 },
+  bannerContainer: { height: 320, position: 'relative' },
+  bannerImage: { width: '100%', height: '100%' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11, 85, 59, 0.45)', padding: 30, justifyContent: 'space-between' },
+  backBtn: { marginTop: 40, width: 45, height: 45, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  headerTextWrapper: { marginBottom: 40 },
+  title: { fontSize: 36, fontWeight: '900', color: '#FFFFFF' },
+  subtitle: { fontSize: 16, color: '#F1F5F9', fontWeight: '500', opacity: 0.9, marginTop: 4 },
+  loginCardWrapper: { marginTop: -50, paddingHorizontal: 25, flex: 1 },
+  loginCard: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 12 },
+  formTitle: { fontSize: 24, fontWeight: '900', color: '#1E293B', marginBottom: 5 },
+  formDesc: { fontSize: 13, color: '#64748B', lineHeight: 20, marginBottom: 25 },
+  inputGroup: { gap: 15, marginBottom: 25 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', paddingHorizontal: 15 },
+>>>>>>> 8345793247d59b57b29551b213dd1a3e990c365a
   inputIcon: { marginRight: 12 },
   input: { flex: 1, paddingVertical: 18, fontSize: 15, color: '#F1F5F9', fontWeight: '500' },
 
